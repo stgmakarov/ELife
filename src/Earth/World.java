@@ -12,6 +12,10 @@ public class World {//мир
     AnyCell [][] cellArray; //все ячейки мира (занятые+свободные)
     int cellCnt=0;
 
+    public AnyCell getCellByPos(int x, int y){
+        return cellArray[y][x];
+    }
+
     public void printInfo(){
         if(worldTime%10!=0)return;
         System.out.println("Шаг " + worldTime);
@@ -33,6 +37,9 @@ public class World {//мир
 
     public boolean isEmptyCell(int xPos, int yPos){
         return cellArray[yPos][xPos].isEmptyCell();
+    }
+    public boolean isEmptyCell(AnyCell cell){
+        return cell.isEmptyCell();
     }
 
     public boolean isCellInWater(@NotNull Cell cell){

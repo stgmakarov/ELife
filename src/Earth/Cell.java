@@ -46,9 +46,14 @@ class Cell extends AnyCell {
     private int attacked=0;//(0..10) флаг атаки. Опускается на 1 за каждый следующий шаг
 
 /*дальше всё что касается мозга*/
+    private final int LAYERS_CNT_MIN = 3;
+    private final int LAYERS_CNT_MAX = 15;
+    private final int LAYERS_POW_MIN = 3;
+    private final int LAYERS_POW_MAX = 10;
+
     private int hidenLayersCnt;//кол-во скрытых уровней
     private int hidenLayersPow;//кол-во нейронов в каждом уровне
-    private final int INPUT_SIGNAL_COUNT = 6;//кол-во входных нейронов
+    private final int INPUT_SIGNAL_COUNT = 8;//кол-во входных нейронов
     /*
     1- уровень энергии
     2- уровень мастерства драки
@@ -56,6 +61,8 @@ class Cell extends AnyCell {
     4- бот перед ним или нет
     5- если бот, то одного цвета или нет
     6- кол-во собратьев рядом
+    7- напр взгляда по X
+    8- напр взгляда по Y
     */
     private final int OUTPUT_SIGNAL_COUNT = 4;//кол-во выходных нейронов
     /*
@@ -64,6 +71,9 @@ class Cell extends AnyCell {
     3- напасть
     4- делиться
     */
+
+    private NNetLayer [] nnet;
+
     public void live(){//функция жизни, вызывается раз за ход
 
         reduceEnergy(myWorld.FOOD_LEVEL_PER_STEP);
@@ -71,10 +81,74 @@ class Cell extends AnyCell {
     }
 
     private void setRndBrain(){//инициализация мозга
-        hidenLayersCnt = (int) Math.round((Math.random() * 7) + 3);
-        hidenLayersPow = (int) Math.round((Math.random() * 7) + 3);
-        int hidenLayersPowTMP = Math.max(hidenLayersPow,INPUT_SIGNAL_COUNT);
+        hidenLayersCnt = (int) Math.round((Math.random() * (LAYERS_CNT_MAX-LAYERS_CNT_MIN)) + LAYERS_CNT_MIN);
+        hidenLayersPow = (int) Math.round((Math.random() * (LAYERS_POW_MAX-LAYERS_POW_MIN)) + LAYERS_POW_MIN);
 
+        nnet = new NNetLayer[hidenLayersCnt+1];
+        nnet[0] = new NNetLayer(INPUT_SIGNAL_COUNT,hidenLayersPow);
+        for(int i=1;i<hidenLayersCnt;i++){
+            nnet[i] = new NNetLayer(hidenLayersPow,hidenLayersPow);
+            nnet[i].setPrevLayer(nnet[i-1]);
+        }
+        nnet[hidenLayersCnt] = new NNetLayer(hidenLayersPow,OUTPUT_SIGNAL_COUNT,1);
+        nnet[hidenLayersCnt].setPrevLayer(nnet[hidenLayersCnt-1]);
+    }
+
+    private int friendsNearCount(){
+        int res=0;
+        for(int i=0;i<8;i++) {//смотрим вокруг
+            int newX = getNewXPosOnStep(i, xPos);
+            int newY = getNewYPosOnStep(i, yPos);
+
+            res += (this.color==myWorld.getCellByPos(newX,newY).getColor())?1:0;
+        }
+        return res;
+    }
+
+    private int thinc(){
+   /*   1- уровень энергии
+        2- уровень мастерства драки
+        3- уровень атаки
+        4- бот перед ним или нет
+        5- если бот, то одного цвета или нет
+        6- кол-во собратьев рядом
+        7- напр взгляда по X
+        8- напр взгляда по Y*/
+
+        float maxOutput = -100;
+        int maxEyeDirection=0;
+        int maxResult=0;
+
+        for(int i=0;i<8;i++){//смотрим вокруг
+            int newX = getNewXPosOnStep(i,xPos);
+            int newY = getNewYPosOnStep(i,yPos);
+            float [] inparr = new float[8];
+            inparr[0] = this.energy/100;
+            inparr[1] = this.fightLevel/100;
+            inparr[2] = this.attacked/10;
+            inparr[3] = (myWorld.isEmptyCell(newX,newY))?0:1;
+            if(inparr[3]==1){
+                inparr[4]=(this.color==myWorld.getCellByPos(newX,newY).getColor())?1:-1;
+            }else inparr[4]=0;
+            inparr[5] = friendsNearCount();
+            inparr[6] = newX - xPos;
+            inparr[7] = newY - yPos;
+
+            nnet[0].calc(inparr);
+            for(int j=1;j<nnet.length;j++){
+                nnet[j].calc();
+            }
+
+            for (int j=0;j<OUTPUT_SIGNAL_COUNT;j++){
+                if (nnet[nnet.length-1].lastOutputs[j] > maxOutput){
+                    maxOutput = nnet[nnet.length-1].lastOutputs[j];
+                    maxResult = j;
+                    maxEyeDirection = i;
+                }
+            }
+        }
+        eyeDirection = maxEyeDirection;
+        return maxResult;
     }
 
     private void reduceAttacked(){
@@ -110,8 +184,9 @@ class Cell extends AnyCell {
         int opponentY = getNewYPosOnStep(eyeDirection,yPos);
 
         if ((opponentX >= 0)&(opponentX < myWorld.WEIGHT)&(opponentY >= 0)&(opponentY <= myWorld.HEIGHT)){
-            if(! myWorld.isEmptyCell(opponentX,opponentY)){
-                fight((Cell)myWorld.cellArray[opponentY][opponentX]);
+            AnyCell opponentCell = myWorld.getCellByPos(opponentX,opponentY);
+            if(! myWorld.isEmptyCell(opponentCell)){
+                fight((Cell)opponentCell);
             }
         }
     }
