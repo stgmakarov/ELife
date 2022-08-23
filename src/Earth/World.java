@@ -2,11 +2,11 @@ package Earth;
 
 import org.jetbrains.annotations.NotNull;
 
-public class World {//описание мира
-    private int worldTime = 0; //Время существования мира
-    public final int HEIGHT; //Высота мира (координата y)
-    public final int WEIGHT; //Ширина мира (координата x)
-    public final int WATERHEIGHT; //Высота воды (координата y)
+public class World {//РјРёСЂ
+    private int worldTime = 0; //РІСЂРµРјСЏ
+    public final int HEIGHT; //РІС‹СЃРѕС‚Р° РјРёСЂР° (РєРѕРѕСЂРґРёРЅР°С‚Р° y)
+    public final int WEIGHT; //С€РёСЂРёРЅР° РјРёСЂР° (РєРѕРѕСЂРґРёРЅР°С‚Р° x)
+    public final int WATERHEIGHT; //РІС‹СЃРѕС‚Р° РјРѕСЂСЏ (РєРѕРѕСЂРґРёРЅР°С‚Р° y)
     private float foodLevel;
     AnyCell [][] cellArray;
     int cellCnt=0;
