@@ -45,10 +45,8 @@ class Cell extends AnyCell {
     private float fightLevel=0;//уровень мастерства драки (0-100)
 
     private void step(){//шагаем по направлению взгляда
-        int newX;
-        int newY;
-        newX = getNewXPosOnStep(eyeDirection,xPos);
-        newY = getNewYPosOnStep(eyeDirection,yPos);
+        int newX = getNewXPosOnStep(eyeDirection,xPos);
+        int newY = getNewYPosOnStep(eyeDirection,yPos);
 
         if (newX <0)newX=0;
         if (newX >=myWorld.WEIGHT)newX=myWorld.WEIGHT-1;
@@ -66,11 +64,22 @@ class Cell extends AnyCell {
         }
     }
 
-    private void eat(){
+    private void eat(){//едим
         addEnergy(myWorld.energyPerEat);
     }
 
-    public void fight(Cell opponentCell){//деремся с соперником
+    private void atack(){
+        int opponentX = getNewXPosOnStep(eyeDirection,xPos);
+        int opponentY = getNewYPosOnStep(eyeDirection,yPos);
+
+        if ((opponentX >= 0)&(opponentX < myWorld.WEIGHT)&(opponentY >= 0)&(opponentY <= myWorld.HEIGHT)){
+            if(! myWorld.isEmptyCell(opponentX,opponentY)){
+                fight((Cell)myWorld.cellArray[opponentY][opponentX]);
+            }
+        }
+    }
+
+    private void fight(Cell opponentCell){//деремся с соперником
         Cell winner;
         Cell looser;
         if ((this.energy * this.fightLevel) > (opponentCell.energy*opponentCell.fightLevel)){//определяем победителя
@@ -87,7 +96,7 @@ class Cell extends AnyCell {
         winner.addEnergy(deltaEnergy);
     }
 
-    Cell(World world, int xPos, int yPos, float energy, int color) {
+    public Cell(World world, int xPos, int yPos, float energy, int color) {
         this.xPos = xPos;
         this.yPos = yPos;
         this.energy = energy;
@@ -101,16 +110,16 @@ class Cell extends AnyCell {
         myWorld.cellCnt -=1;
     }
 
-    public float getEnergy() {
+    private float getEnergy() {
         return energy;
     }
 
-    public void addEnergy(float energy) {
+    private void addEnergy(float energy) {
         this.energy += energy;
         this.energy = (this.energy>100)?100:this.energy;
     }
 
-    public float reduceEnergy(float energy){
+    private float reduceEnergy(float energy){
         if (this.energy > energy){
             this.energy -= energy;
             return energy;
