@@ -4,6 +4,7 @@ import org.jetbrains.annotations.NotNull;
 
 public class World {//мир
     private int worldTime = 0; //время
+    public float energyPerEat;
     public final int HEIGHT; //высота мира (координата y)
     public final int WEIGHT; //ширина мира (координата x)
     public final int WATERHEIGHT; //высота моря (координата y)
@@ -52,10 +53,15 @@ public class World {//мир
         }
     }
 
-    public World(int height, int weight, int waterheight, float foodLevel, int initCellCnt){
+    public void setEnergyPerEat(float energyPerEat){
+        this.energyPerEat = energyPerEat;
+    }
+
+    public World(int height, int weight, int waterheight, float foodLevel, int initCellCnt, float energyPerEat){
         HEIGHT = height;
         WEIGHT = weight;
         WATERHEIGHT = waterheight;
+        setEnergyPerEat(energyPerEat);
         setFoodLevel(foodLevel);
         createCellArr(initCellCnt);
     }

@@ -36,8 +36,6 @@ abstract class AnyCell{
                 yield yPos;
         };
     }
-
-
 }
 
 class Cell extends AnyCell {
@@ -46,7 +44,7 @@ class Cell extends AnyCell {
     private int eyeDirection=0;//напрвление взгляда (0 - вверх)
     private float fightLevel=0;//уровень мастерства драки (0-100)
 
-    private void step(){
+    private void step(){//шагаем по направлению взгляда
         int newX;
         int newY;
         newX = getNewXPosOnStep(eyeDirection,xPos);
@@ -68,10 +66,14 @@ class Cell extends AnyCell {
         }
     }
 
-    public void fight(Cell opponentCell){
+    private void eat(){
+        addEnergy(myWorld.energyPerEat);
+    }
+
+    public void fight(Cell opponentCell){//деремся с соперником
         Cell winner;
         Cell looser;
-        if ((this.energy * this.fightLevel) > (opponentCell.energy*opponentCell.fightLevel)){
+        if ((this.energy * this.fightLevel) > (opponentCell.energy*opponentCell.fightLevel)){//определяем победителя
             winner = this;
             looser = opponentCell;
         }else{
@@ -79,7 +81,7 @@ class Cell extends AnyCell {
             looser = this;
         };
 
-        float deltaEnergy = looser.energy * winner.fightLevel / 100;
+        float deltaEnergy = looser.energy * winner.fightLevel / 100;//передача энергии
         winner.fightLevel += 1;
         looser.reduceEnergy(deltaEnergy);
         winner.addEnergy(deltaEnergy);
