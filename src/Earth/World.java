@@ -7,8 +7,8 @@ public class World {//мир
     public final int HEIGHT; //высота мира (координата y)
     public final int WEIGHT; //ширина мира (координата x)
     public final int WATERHEIGHT; //высота моря (координата y)
-    private float foodLevel;
-    AnyCell [][] cellArray;
+    private float foodLevel; //кол-во еды (фотосинтез 0-100)
+    AnyCell [][] cellArray; //все ячейки мира (занятые+свободные)
     int cellCnt=0;
 
     public boolean isEmptyCell(int xPos, int yPos){
@@ -52,12 +52,12 @@ public class World {//мир
         }
     }
 
-    public World(int height, int weight, int waterheight, float foodLevel, int cellCnt){
+    public World(int height, int weight, int waterheight, float foodLevel, int initCellCnt){
         HEIGHT = height;
         WEIGHT = weight;
         WATERHEIGHT = waterheight;
         setFoodLevel(foodLevel);
-        createCellArr(cellCnt);
+        createCellArr(initCellCnt);
     }
 
     public float getFoodLevel() {

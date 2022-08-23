@@ -41,9 +41,10 @@ abstract class AnyCell{
 }
 
 class Cell extends AnyCell {
-    private float energy;//энергия клетки
-    private int color;//цвет
+    private float energy;//энергия клетки (1-100)
+    private final int color;//цвет
     private int eyeDirection=0;//напрвление взгляда (0 - вверх)
+    private float fightLevel=0;//уровень мастерства драки (0-100)
 
     private void step(){
         int newX;
@@ -67,6 +68,23 @@ class Cell extends AnyCell {
         }
     }
 
+    public void fight(Cell opponentCell){
+        Cell winner;
+        Cell looser;
+        if ((this.energy * this.fightLevel) > (opponentCell.energy*opponentCell.fightLevel)){
+            winner = this;
+            looser = opponentCell;
+        }else{
+            winner = opponentCell;
+            looser = this;
+        };
+
+        float deltaEnergy = looser.energy * winner.fightLevel / 100;
+        winner.fightLevel += 1;
+        looser.reduceEnergy(deltaEnergy);
+        winner.addEnergy(deltaEnergy);
+    }
+
     Cell(World world, int xPos, int yPos, float energy, int color) {
         this.xPos = xPos;
         this.yPos = yPos;
@@ -76,7 +94,7 @@ class Cell extends AnyCell {
         myWorld.cellCnt +=1;
     }
 
-    public void die(){
+    private void die(){
         myWorld.cellArray[yPos][xPos] = new EmptyCell(xPos,yPos);
         myWorld.cellCnt -=1;
     }
@@ -90,6 +108,16 @@ class Cell extends AnyCell {
         this.energy = (this.energy>100)?100:this.energy;
     }
 
+    public float reduceEnergy(float energy){
+        if (this.energy > energy){
+            this.energy -= energy;
+            return energy;
+        }else {
+            die();
+            return this.energy;
+        }
+    }
+
     @Override
     public boolean isEmptyCell() {
         return false;
@@ -98,6 +126,10 @@ class Cell extends AnyCell {
     @Override
     public int getColor() {
         return color;
+    }
+
+    public float getFightLevel() {
+        return fightLevel;
     }
 }
 
