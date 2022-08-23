@@ -1,9 +1,9 @@
 package Earth;
 
 abstract class AnyCell{
-    int xPos;//позиция в мире
-    int yPos;//позиция в мире
-    World myWorld;//ссылка на мир
+    int xPos;//РїРѕР·РёС†РёСЏ РІ РјРёСЂРµ
+    int yPos;//РїРѕР·РёС†РёСЏ РІ РјРёСЂРµ
+    World myWorld;//СЃСЃС‹Р»РєР° РЅР° РјРёСЂ
     abstract public boolean isEmptyCell();
     abstract public int getColor();
 
@@ -41,9 +41,9 @@ abstract class AnyCell{
 }
 
 class Cell extends AnyCell {
-    private float energy;//энергия клетки
-    private int color;//цвет
-    private int eyeDirection=0;//напрвление взгляда (0 - вверх)
+    private float energy;//СЌРЅРµСЂРіРёСЏ РєР»РµС‚РєРё
+    private int color;//С†РІРµС‚
+    private int eyeDirection=0;//РЅР°РїСЂРІР»РµРЅРёРµ РІР·РіР»СЏРґР° (0 - РІРІРµСЂС…)
 
     private void step(){
         int newX;
