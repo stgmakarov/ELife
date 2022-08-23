@@ -4,13 +4,32 @@ import org.jetbrains.annotations.NotNull;
 
 public class World {//мир
     private int worldTime = 0; //время
-    public float energyPerEat;
     public final int HEIGHT; //высота мира (координата y)
     public final int WEIGHT; //ширина мира (координата x)
     public final int WATERHEIGHT; //высота моря (координата y)
     private float foodLevel; //кол-во еды (фотосинтез 0-100)
+    public final float FOOD_LEVEL_PER_STEP; //кол-во еды, которое каждыя клетка тратит за ход
     AnyCell [][] cellArray; //все ячейки мира (занятые+свободные)
     int cellCnt=0;
+
+    public void printInfo(){
+        if(worldTime%10!=0)return;
+        System.out.println("Шаг " + worldTime);
+        System.out.println("Кол-во живих клеток " + cellCnt);
+        System.out.println("================================");
+    }
+
+    public void live(){
+        worldTime += 1;
+        checkConsistency();
+        for(int i=0;i<HEIGHT;i++){
+            for(int j=0;j<WEIGHT;j++){
+                if (!isEmptyCell(j,i)){
+                    ((Cell)cellArray[i][j]).live();
+                }
+            }
+        }
+    }
 
     public boolean isEmptyCell(int xPos, int yPos){
         return cellArray[yPos][xPos].isEmptyCell();
@@ -53,15 +72,12 @@ public class World {//мир
         }
     }
 
-    public void setEnergyPerEat(float energyPerEat){
-        this.energyPerEat = energyPerEat;
-    }
 
-    public World(int height, int weight, int waterheight, float foodLevel, int initCellCnt, float energyPerEat){
+    public World(int height, int weight, int waterheight, float foodLevel, int initCellCnt, float energyPerEat, float foodLevelPerStep){
         HEIGHT = height;
         WEIGHT = weight;
         WATERHEIGHT = waterheight;
-        setEnergyPerEat(energyPerEat);
+        this.FOOD_LEVEL_PER_STEP = foodLevelPerStep;
         setFoodLevel(foodLevel);
         createCellArr(initCellCnt);
     }

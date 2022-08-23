@@ -40,9 +40,46 @@ abstract class AnyCell{
 
 class Cell extends AnyCell {
     private float energy;//энергия клетки (1-100)
-    private final int color;//цвет
-    private int eyeDirection=0;//напрвление взгляда (0 - вверх)
+    private final int color;//цвет (0- пустая клетка)
     private float fightLevel=0;//уровень мастерства драки (0-100)
+    private int eyeDirection=0;//напрвление взгляда (0 - вверх)
+    private int attacked=0;//(0..10) флаг атаки. Опускается на 1 за каждый следующий шаг
+
+/*дальше всё что касается мозга*/
+    private int hidenLayersCnt;//кол-во скрытых уровней
+    private int hidenLayersPow;//кол-во нейронов в каждом уровне
+    private final int INPUT_SIGNAL_COUNT = 6;//кол-во входных нейронов
+    /*
+    1- уровень энергии
+    2- уровень мастерства драки
+    3- уровень атаки
+    4- бот перед ним или нет
+    5- если бот, то одного цвета или нет
+    6- кол-во собратьев рядом
+    */
+    private final int OUTPUT_SIGNAL_COUNT = 4;//кол-во выходных нейронов
+    /*
+    1- есть
+    2- идти
+    3- напасть
+    4- делиться
+    */
+    public void live(){//функция жизни, вызывается раз за ход
+
+        reduceEnergy(myWorld.FOOD_LEVEL_PER_STEP);
+        reduceAttacked();
+    }
+
+    private void setRndBrain(){//инициализация мозга
+        hidenLayersCnt = (int) Math.round((Math.random() * 7) + 3);
+        hidenLayersPow = (int) Math.round((Math.random() * 7) + 3);
+        int hidenLayersPowTMP = Math.max(hidenLayersPow,INPUT_SIGNAL_COUNT);
+
+    }
+
+    private void reduceAttacked(){
+        attacked = (attacked>0)?attacked--:0;
+    }
 
     private void step(){//шагаем по направлению взгляда
         int newX = getNewXPosOnStep(eyeDirection,xPos);
@@ -65,7 +102,7 @@ class Cell extends AnyCell {
     }
 
     private void eat(){//едим
-        addEnergy(myWorld.energyPerEat);
+        if(!myWorld.isCellInWater(this)){ addEnergy(myWorld.getFoodLevel());};
     }
 
     private void atack(){
@@ -82,6 +119,7 @@ class Cell extends AnyCell {
     private void fight(Cell opponentCell){//деремся с соперником
         Cell winner;
         Cell looser;
+        opponentCell.setAttacked();
         if ((this.energy * this.fightLevel) > (opponentCell.energy*opponentCell.fightLevel)){//определяем победителя
             winner = this;
             looser = opponentCell;
@@ -103,6 +141,7 @@ class Cell extends AnyCell {
         this.color = color;
         myWorld = world;
         myWorld.cellCnt +=1;
+        setRndBrain();
     }
 
     private void die(){
@@ -141,6 +180,14 @@ class Cell extends AnyCell {
 
     public float getFightLevel() {
         return fightLevel;
+    }
+
+    public int getAttacked() {
+        return attacked;
+    }
+
+    public void setAttacked() {
+        this.attacked = 10;
     }
 }
 
