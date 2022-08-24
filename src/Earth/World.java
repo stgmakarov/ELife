@@ -11,7 +11,7 @@ public class World {//мир
     public final int CNTTOADD = 500; // кол-во клеток для добавления (см MINCELLCOUNT)
     private float foodLevel; //кол-во еды (фотосинтез 0-100)
     public final float FOOD_LEVEL_PER_STEP; //кол-во еды, которое каждыя клетка тратит за ход
-    AnyCell [][] cellArray; //все ячейки мира (занятые+свободные)
+    public AnyCell [][] cellArray; //все ячейки мира (занятые+свободные)
     int cellCnt=0;
 
     public AnyCell getCellByPos(int x, int y){ //ссылка на ячейку по позиции
@@ -45,6 +45,12 @@ public class World {//мир
         if (this.cellCnt < MINCELLCOUNT){
             addCell(CNTTOADD);
         }
+        for(int i=0;i<HEIGHT;i++){
+            for(int j=0;j<WEIGHT;j++){
+                cellArray[i][j].setCellInWater(WATERHEIGHT);
+            }
+        }
+
     }
 
     public boolean isEmptyCell(int xPos, int yPos){ //ячейка с живой клеткой или пустой
@@ -107,7 +113,7 @@ public class World {//мир
     }
 
     //конструктор мира
-    public World(int height, int weight, int waterheight, float foodLevel, int initCellCnt, float energyPerEat, float foodLevelPerStep){
+    public World(int height, int weight, int waterheight, float foodLevel, int initCellCnt, float foodLevelPerStep){
         HEIGHT = height;
         WEIGHT = weight;
         WATERHEIGHT = waterheight;

@@ -1,11 +1,23 @@
 package Earth;
 
-abstract class AnyCell{
-    int xPos;//позиция в мире
-    int yPos;//позиция в мире
+import java.awt.*;
+
+public abstract class AnyCell{
+    public int xPos;//позиция в мире
+    public int yPos;//позиция в мире
+    public boolean cellInWater;
     World myWorld;//ссылка на мир
     abstract public boolean isEmptyCell();
     abstract public int getColor();
+    abstract public Color getRealColor();
+
+    public void setCellInWater(int waterLevel){
+        if(this.yPos < waterLevel)
+        {
+            cellInWater = true;
+        }
+        else cellInWater = false;
+    }
 
     public int getNewXPosOnStep(int eyeDirection, int xPos){//позиция по координате X в направлении взгляда
         return switch (eyeDirection){
@@ -39,6 +51,8 @@ abstract class AnyCell{
 }
 
 class Cell extends AnyCell {//ячейка поля, которая может быть пустой или живой
+    private float maxEnergy = 100;//максимум энергии
+    private final float MAXENERGYDECPERSTEP = 1f;//уменьшение макс.енергии за шаг
     private float energy;//энергия клетки (1-100)
     private final int color;//цвет (0- пустая клетка)
     private float fightLevel=0;//уровень мастерства драки (0-100)
@@ -75,7 +89,7 @@ class Cell extends AnyCell {//ячейка поля, которая может �
     */
 
     /*дальше всё что касается деления*/
-    public final float CHANCETOCHANGECOLOR = 0.00001f;//шанс поменять цвет
+    public final float CHANCETOCHANGECOLOR = 0.001f;//шанс поменять цвет
     public final float CHANCETOMUTATE = 0.2f;//шанс мутировать при делении
 
     private NNetLayer [] nnet;
@@ -85,11 +99,13 @@ class Cell extends AnyCell {//ячейка поля, которая может �
         thinc();
         reduceEnergy(myWorld.FOOD_LEVEL_PER_STEP);
         reduceAttacked();
+        maxEnergy-=MAXENERGYDECPERSTEP;
     }
 
     public void makeAction(){
         if(madeAction)return;
         switch (nextAction){
+            case 0: break;
             case 1:{
                 eat();
                 break;
@@ -308,7 +324,7 @@ class Cell extends AnyCell {//ячейка поля, которая может �
 
     private void addEnergy(float energy) {
         this.energy += energy;
-        this.energy = (this.energy>100)?100:this.energy;
+        this.energy = (this.energy>maxEnergy)?maxEnergy:this.energy;
     }
 
     private float reduceEnergy(float energy){
@@ -329,6 +345,23 @@ class Cell extends AnyCell {//ячейка поля, которая может �
     @Override
     public int getColor() {
         return color;
+    }
+
+    @Override
+    public Color getRealColor() {
+        return switch (color){
+            case 1: yield Color.green;
+            case 2: yield Color.red;
+            case 3: yield Color.CYAN;
+            case 4: yield Color.magenta;
+            case 5: yield Color.ORANGE;
+            case 6: yield Color.GRAY;
+            case 7: yield Color.YELLOW;
+            case 8: yield Color.pink;
+            case 9: yield Color.BLACK;
+            case 10: yield Color.DARK_GRAY;
+            default: yield Color.WHITE;
+        };
     }
 
     public float getFightLevel() {
@@ -357,5 +390,10 @@ class EmptyCell extends AnyCell{//пустая ячейка поля
     @Override
     public int getColor() {
         return 0;
+    }
+
+    @Override
+    public Color getRealColor() {
+        return (cellInWater)?Color.BLUE:Color.WHITE;
     }
 }
