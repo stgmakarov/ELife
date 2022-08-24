@@ -1,6 +1,6 @@
 package Earth;
 
-public class NNetLayer {
+public class NNetLayer {//слой персептронов
     float [] lastOutputs;
     AbsNeyron [] nLayer;
     private NNetLayer prevLayer;
@@ -9,8 +9,21 @@ public class NNetLayer {
         this.prevLayer = prevLayer;
     }
 
-    public NNetLayer(int inputCnt, int neyronCnt){
-        int activationType = (int)Math.random()*2;
+    public NNetLayer(int inputCnt, int neyronCnt){//конструктор, заполняет значениями по рандому
+        int activationType = (int)(Math.random()*2);
+        lastOutputs = new float[neyronCnt];
+        nLayer = new AbsNeyron[neyronCnt];
+        for(int i=0;i<neyronCnt;i++){
+            switch (activationType){
+                case 0:
+                    nLayer[i] = new Neyron1(inputCnt);
+                default:
+                    nLayer[i] = new Neyron2(inputCnt);
+            }
+        }
+    }
+
+    public NNetLayer(int inputCnt, int neyronCnt, int activationType){//конструктор определенного типа нейронов
         lastOutputs = new float[neyronCnt];
         nLayer = new AbsNeyron[neyronCnt];
         for(int i=0;i<neyronCnt;i++){
@@ -23,27 +36,14 @@ public class NNetLayer {
         }
     }
 
-    public NNetLayer(int inputCnt, int neyronCnt, int activationType){
-        lastOutputs = new float[neyronCnt];
-        nLayer = new AbsNeyron[neyronCnt];
-        for(int i=0;i<neyronCnt;i++){
-            switch (activationType){
-                case 1:
-                    nLayer[i] = new Neyron1(inputCnt);
-                case 2:
-                    nLayer[i] = new Neyron2(inputCnt);
-            }
-        }
-    }
-
-    public void calc(float [] input){
+    public void calc(float [] input){ //расчёт выхода по входу
         for(int i=0;i<nLayer.length;i++){
             nLayer[i].activateFunc(input);
             lastOutputs[i] = nLayer[i].lastOutput;
         }
     }
 
-    public void calc(){
+    public void calc(){ //расчёт выхода по входу
         for(int i=0;i<nLayer.length;i++){
             nLayer[i].activateFunc(prevLayer.lastOutputs);
             lastOutputs[i] = nLayer[i].lastOutput;
@@ -51,7 +51,7 @@ public class NNetLayer {
     }
 }
 
-abstract class AbsNeyron{
+abstract class AbsNeyron{ //нейрон (абстрактный класс без активации)
     float [] weights;
     float lastOutput;
     public AbsNeyron(int inpCnt){

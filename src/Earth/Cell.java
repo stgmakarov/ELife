@@ -7,7 +7,7 @@ abstract class AnyCell{
     abstract public boolean isEmptyCell();
     abstract public int getColor();
 
-    public int getNewXPosOnStep(int eyeDirection, int xPos){
+    public int getNewXPosOnStep(int eyeDirection, int xPos){//позиция по координате X в направлении взгляда
         return switch (eyeDirection){
             case 1:
             case 2:
@@ -22,7 +22,7 @@ abstract class AnyCell{
         };
     }
 
-    public int getNewYPosOnStep(int eyeDirection, int yPos){
+    public int getNewYPosOnStep(int eyeDirection, int yPos){//позиция по координате Y в направлении взгляда
         return switch (eyeDirection){
             case 7:
             case 0:
@@ -38,21 +38,22 @@ abstract class AnyCell{
     }
 }
 
-class Cell extends AnyCell {
+class Cell extends AnyCell {//ячейка поля, которая может быть пустой или живой
     private float energy;//энергия клетки (1-100)
     private final int color;//цвет (0- пустая клетка)
     private float fightLevel=0;//уровень мастерства драки (0-100)
     private int eyeDirection=0;//напрвление взгляда (0 - вверх)
+    private int nextAction;//запланированное действие
     private int attacked=0;//(0..10) флаг атаки. Опускается на 1 за каждый следующий шаг
 
 /*дальше всё что касается мозга*/
-    private final int LAYERS_CNT_MIN = 3;
-    private final int LAYERS_CNT_MAX = 15;
-    private final int LAYERS_POW_MIN = 3;
-    private final int LAYERS_POW_MAX = 10;
+    private final int LAYERS_CNT_MIN = 2;//при инициализации, мин. кол-во скрытых слоев
+    private final int LAYERS_CNT_MAX = 8;//при инициализации, макс. кол-во скрытых слоев
+    private final int LAYERS_POW_MIN = 3;//при инициализации, мин. кол-во нейронов в скрытом слое
+    private final int LAYERS_POW_MAX = 30;//при инициализации, макс. кол-во нейронов в скрытом слое
 
-    private int hidenLayersCnt;//кол-во скрытых уровней
-    private int hidenLayersPow;//кол-во нейронов в каждом уровне
+    private int hidenLayersCnt;//кол-во скрытых слоев
+    private int hidenLayersPow;//кол-во нейронов в каждом слое
     private final int INPUT_SIGNAL_COUNT = 8;//кол-во входных нейронов
     /*
     1- уровень энергии
@@ -75,7 +76,7 @@ class Cell extends AnyCell {
     private NNetLayer [] nnet;
 
     public void live(){//функция жизни, вызывается раз за ход
-
+        thinc();
         reduceEnergy(myWorld.FOOD_LEVEL_PER_STEP);
         reduceAttacked();
     }
@@ -94,18 +95,19 @@ class Cell extends AnyCell {
         nnet[hidenLayersCnt].setPrevLayer(nnet[hidenLayersCnt-1]);
     }
 
-    private int friendsNearCount(){
+    private int friendsNearCount(){//кол-во клеток одного цвета рядом
         int res=0;
         for(int i=0;i<8;i++) {//смотрим вокруг
             int newX = getNewXPosOnStep(i, xPos);
             int newY = getNewYPosOnStep(i, yPos);
-
-            res += (this.color==myWorld.getCellByPos(newX,newY).getColor())?1:0;
+            if ((newX>=0)&(newY>=0)&(newX<myWorld.WEIGHT)&(newY<myWorld.HEIGHT)){
+                res += (this.color==myWorld.getCellByPos(newX,newY).getColor())?1:0;
+            }
         }
         return res;
     }
 
-    private int thinc(){
+    public void thinc(){//принять решение, что делаем
    /*   1- уровень энергии
         2- уровень мастерства драки
         3- уровень атаки
@@ -122,6 +124,7 @@ class Cell extends AnyCell {
         for(int i=0;i<8;i++){//смотрим вокруг
             int newX = getNewXPosOnStep(i,xPos);
             int newY = getNewYPosOnStep(i,yPos);
+            if(newX<0 | newY <0 | newX>=myWorld.WEIGHT | newY>=myWorld.HEIGHT) continue;
             float [] inparr = new float[8];
             inparr[0] = this.energy/100;
             inparr[1] = this.fightLevel/100;
@@ -148,7 +151,7 @@ class Cell extends AnyCell {
             }
         }
         eyeDirection = maxEyeDirection;
-        return maxResult;
+        nextAction = maxResult;
     }
 
     private void reduceAttacked(){
@@ -179,11 +182,11 @@ class Cell extends AnyCell {
         if(!myWorld.isCellInWater(this)){ addEnergy(myWorld.getFoodLevel());};
     }
 
-    private void atack(){
+    private void atack(){//атакуем
         int opponentX = getNewXPosOnStep(eyeDirection,xPos);
         int opponentY = getNewYPosOnStep(eyeDirection,yPos);
 
-        if ((opponentX >= 0)&(opponentX < myWorld.WEIGHT)&(opponentY >= 0)&(opponentY <= myWorld.HEIGHT)){
+        if ((opponentX >= 0)&(opponentX < myWorld.WEIGHT)&(opponentY >= 0)&(opponentY < myWorld.HEIGHT)){
             AnyCell opponentCell = myWorld.getCellByPos(opponentX,opponentY);
             if(! myWorld.isEmptyCell(opponentCell)){
                 fight((Cell)opponentCell);
@@ -191,7 +194,7 @@ class Cell extends AnyCell {
         }
     }
 
-    private void fight(Cell opponentCell){//деремся с соперником
+    private void fight(Cell opponentCell){//определение победителя в схватке
         Cell winner;
         Cell looser;
         opponentCell.setAttacked();
@@ -219,7 +222,7 @@ class Cell extends AnyCell {
         setRndBrain();
     }
 
-    private void die(){
+    private void die(){//смерть
         myWorld.cellArray[yPos][xPos] = new EmptyCell(xPos,yPos);
         myWorld.cellCnt -=1;
     }
@@ -266,7 +269,7 @@ class Cell extends AnyCell {
     }
 }
 
-class EmptyCell extends AnyCell{
+class EmptyCell extends AnyCell{//пустая ячейка поля
     public EmptyCell(int xPos, int yPos){
         this.xPos = xPos;
         this.yPos = yPos;
