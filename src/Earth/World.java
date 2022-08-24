@@ -35,6 +35,13 @@ public class World {//мир
                 }
             }
         }
+        for(int i=0;i<HEIGHT;i++){
+            for(int j=0;j<WEIGHT;j++){
+                if (!isEmptyCell(j,i)){
+                    ((Cell)cellArray[i][j]).makeAction();
+                }
+            }
+        }
         if (this.cellCnt < MINCELLCOUNT){
             addCell(CNTTOADD);
         }

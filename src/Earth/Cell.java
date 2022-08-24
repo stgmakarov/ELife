@@ -45,6 +45,7 @@ class Cell extends AnyCell {//ячейка поля, которая может �
     private int eyeDirection=0;//напрвление взгляда (0 - вверх)
     private int nextAction;//запланированное действие
     private int attacked=0;//(0..10) флаг атаки. Опускается на 1 за каждый следующий шаг
+    private boolean madeAction = false;
 
 /*дальше всё что касается мозга*/
     private final int LAYERS_CNT_MIN = 2;//при инициализации, мин. кол-во скрытых слоев
@@ -73,12 +74,41 @@ class Cell extends AnyCell {//ячейка поля, которая может �
     4- делиться
     */
 
+    /*дальше всё что касается деления*/
+    public final float CHANCETOCHANGECOLOR = 0.00001f;//шанс поменять цвет
+    public final float CHANCETOMUTATE = 0.2f;//шанс мутировать при делении
+
     private NNetLayer [] nnet;
 
     public void live(){//функция жизни, вызывается раз за ход
+        madeAction = false;
         thinc();
         reduceEnergy(myWorld.FOOD_LEVEL_PER_STEP);
         reduceAttacked();
+    }
+
+    public void makeAction(){
+        if(madeAction)return;
+        switch (nextAction){
+            case 1:{
+                eat();
+                break;
+            }
+            case 2:{
+                step();
+                break;
+            }
+            case 3:{
+                atack();
+                break;
+            }
+            case 4:{
+                split();
+                break;
+            }
+            default: throw new ArrayStoreException();
+        }
+        madeAction = true;
     }
 
     private void setRndBrain(){//инициализация мозга
@@ -95,6 +125,14 @@ class Cell extends AnyCell {//ячейка поля, которая может �
         nnet[hidenLayersCnt].setPrevLayer(nnet[hidenLayersCnt-1]);
     }
 
+    private void copyBrainAndMutate(Cell parentCell, Boolean mutate){
+        nnet = new NNetLayer[parentCell.nnet.length];
+        for(int i=0;i<parentCell.nnet.length;i++){
+            nnet[i] = new NNetLayer(parentCell.nnet[i],mutate);
+            if(i>0)nnet[i].setPrevLayer(nnet[i-1]);
+        }
+    }
+
     private int friendsNearCount(){//кол-во клеток одного цвета рядом
         int res=0;
         for(int i=0;i<8;i++) {//смотрим вокруг
@@ -105,6 +143,29 @@ class Cell extends AnyCell {//ячейка поля, которая может �
             }
         }
         return res;
+    }
+
+    private void split(){//деление
+        //ищем место, куда можно поделиться
+        int splitX = -1;
+        int splitY = -1;
+        for(int i=0;i<8;i++) {//смотрим вокруг
+            int newX = getNewXPosOnStep(i, xPos);
+            int newY = getNewYPosOnStep(i, yPos);
+            if (newX < 0 | newY < 0 | newX >= myWorld.WEIGHT | newY >= myWorld.HEIGHT) continue;
+
+            if (myWorld.isEmptyCell(newX,newY)){
+                splitX = newX;
+                splitY = newY;
+                break;
+            }
+        }
+        if ((splitX >= 0)&(splitY >= 0)){//нашли
+            boolean mutate = Math.random()<=CHANCETOMUTATE;
+            myWorld.cellArray[splitY][splitX]=null;
+            myWorld.cellArray[splitY][splitX] = new Cell(splitX,splitY,this,mutate);
+            this.energy/=2;
+        }
     }
 
     public void thinc(){//принять решение, что делаем
@@ -151,7 +212,7 @@ class Cell extends AnyCell {//ячейка поля, которая может �
             }
         }
         eyeDirection = maxEyeDirection;
-        nextAction = maxResult;
+        nextAction = maxResult+1;
     }
 
     private void reduceAttacked(){
@@ -220,6 +281,20 @@ class Cell extends AnyCell {//ячейка поля, которая может �
         myWorld = world;
         myWorld.cellCnt +=1;
         setRndBrain();
+    }
+
+    public Cell(int xPos, int yPos, Cell parentCell,boolean mutate) {
+        this.xPos = xPos;
+        this.yPos = yPos;
+        this.energy = parentCell.energy/2;
+        float rnd = (float) Math.random();
+        if (rnd <= CHANCETOCHANGECOLOR){
+            this.color = (int) (Math.random()*9+1);
+        }else this.color = parentCell.color;
+
+        myWorld = parentCell.myWorld;
+        myWorld.cellCnt +=1;
+        copyBrainAndMutate(parentCell,mutate);
     }
 
     private void die(){//смерть

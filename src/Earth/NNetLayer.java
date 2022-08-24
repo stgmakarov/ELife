@@ -4,34 +4,65 @@ public class NNetLayer {//слой персептронов
     float [] lastOutputs;
     AbsNeyron [] nLayer;
     private NNetLayer prevLayer;
+    private final int activationType;
 
     public void setPrevLayer(NNetLayer prevLayer) {
         this.prevLayer = prevLayer;
     }
 
     public NNetLayer(int inputCnt, int neyronCnt){//конструктор, заполняет значениями по рандому
-        int activationType = (int)(Math.random()*2);
+        this.activationType = (int)(Math.random()*2);
         lastOutputs = new float[neyronCnt];
         nLayer = new AbsNeyron[neyronCnt];
         for(int i=0;i<neyronCnt;i++){
             switch (activationType){
-                case 0:
+                case 0:{
                     nLayer[i] = new Neyron1(inputCnt);
-                default:
+                    break;
+                }
+                default: {
                     nLayer[i] = new Neyron2(inputCnt);
+                    break;
+                }
+            }
+        }
+    }
+
+    public NNetLayer(NNetLayer copyFrom, Boolean mutate){
+        this.activationType = copyFrom.activationType;
+        int neyronCnt = copyFrom.nLayer.length;
+        lastOutputs = new float[neyronCnt];
+        nLayer = new AbsNeyron[neyronCnt];
+        for(int i=0;i<neyronCnt;i++){
+            int inputCnt = copyFrom.nLayer[i].weights.length;
+            switch (activationType){
+                case 0:{
+                    nLayer[i] = new Neyron1(copyFrom.nLayer[i], mutate);
+                    break;
+                }
+                default:{
+                    nLayer[i] = new Neyron2(copyFrom.nLayer[i], mutate);
+                    break;
+                }
+
             }
         }
     }
 
     public NNetLayer(int inputCnt, int neyronCnt, int activationType){//конструктор определенного типа нейронов
+        this.activationType = activationType;
         lastOutputs = new float[neyronCnt];
         nLayer = new AbsNeyron[neyronCnt];
         for(int i=0;i<neyronCnt;i++){
             switch (activationType){
-                case 1:
+                case 1:{
                     nLayer[i] = new Neyron1(inputCnt);
-                case 2:
+                    break;
+                }
+                case 2:{
                     nLayer[i] = new Neyron2(inputCnt);
+                    break;
+                }
             }
         }
     }
@@ -52,12 +83,29 @@ public class NNetLayer {//слой персептронов
 }
 
 abstract class AbsNeyron{ //нейрон (абстрактный класс без активации)
+    public final float CHANCETOMUTATEFORSINAPSE = 0.01f;//шанс для отдельного синапса поменять значение при мутации
+    public final float MAXPERCENTFORSINAPSE = 0.1f;//процент, на который синапс может поменять значение
     float [] weights;
     float lastOutput;
     public AbsNeyron(int inpCnt){
         weights = new float[inpCnt];
         for(int i=0;i<inpCnt;i++){
             weights[i] = (float) (Math.random()*0.02-0.01);
+        }
+    }
+
+    public AbsNeyron(AbsNeyron copyFrom, Boolean mutate){
+        int inpCnt = copyFrom.weights.length;
+        weights = new float[inpCnt];
+        for(int i=0;i<inpCnt;i++){
+            weights[i] = copyFrom.weights[i];
+            if (mutate){
+                float rnd = (float) Math.random();
+                if (rnd <= CHANCETOMUTATEFORSINAPSE){
+                    float rnd2 = (float) (1 + Math.random()*MAXPERCENTFORSINAPSE*2 - MAXPERCENTFORSINAPSE);
+                    weights[i] *= rnd2;
+                }
+            }
         }
     }
 
@@ -81,6 +129,10 @@ abstract class AbsNeyron{ //нейрон (абстрактный класс бе
 
 class Neyron1 extends AbsNeyron {
 
+    public Neyron1(AbsNeyron copyFrom, Boolean mutate) {
+        super(copyFrom, mutate);
+    }
+
     public Neyron1(int inpCnt) {
         super(inpCnt);
     }
@@ -97,6 +149,9 @@ class Neyron1 extends AbsNeyron {
 }
 
 class Neyron2 extends AbsNeyron{
+    public Neyron2(AbsNeyron copyFrom, Boolean mutate) {
+        super(copyFrom, mutate);
+    }
     public Neyron2(int inpCnt) {
         super(inpCnt);
     }
