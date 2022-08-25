@@ -83,8 +83,8 @@ public class NNetLayer {//слой персептронов
 }
 
 abstract class AbsNeyron{ //нейрон (абстрактный класс без активации)
-    public final float CHANCETOMUTATEFORSINAPSE = 0.01f;//шанс для отдельного синапса поменять значение при мутации
-    public final float MAXPERCENTFORSINAPSE = 0.2f;//процент, на который синапс может поменять значение
+    public final float CHANCETOMUTATEFORSINAPSE = 0.05f;//шанс для отдельного синапса поменять значение при мутации
+    public final float MAXPERCENTFORSINAPSE = 0.5f;//процент, на который синапс может поменять значение
     float [] weights;
     float lastOutput;
     public AbsNeyron(int inpCnt){

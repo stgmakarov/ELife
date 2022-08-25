@@ -4,12 +4,14 @@ import org.jetbrains.annotations.NotNull;
 
 public class World {//мир
     private int worldTime = 0; //время
+    public final int PREDATOR_FIGHT_LEV = 5;
+    public static final float UNDERWATERFOOD = 0.85f;
     public final int HEIGHT; //высота мира (координата y)
     public final int WEIGHT; //ширина мира (координата x)
     public final int WATERHEIGHT; //высота моря (координата y)
-    public final int MINCELLCOUNT = 500; //минимальное кол-во жизни. Если становится меньше, добавляем CNTTOADD клеток
+    public final int MINCELLCOUNT = 100; //минимальное кол-во жизни. Если становится меньше, добавляем CNTTOADD клеток
     public final int CNTTOADD = 500; // кол-во клеток для добавления (см MINCELLCOUNT)
-    private float foodLevel; //кол-во еды (фотосинтез 0-100)
+    private float foodLevel;
     public final float FOOD_LEVEL_PER_STEP; //кол-во еды, которое каждыя клетка тратит за ход
     public AnyCell [][] cellArray; //все ячейки мира (занятые+свободные)
     int cellCnt=0;
@@ -22,19 +24,40 @@ public class World {//мир
         if(worldTime%10!=0)return;
         System.out.println("Шаг " + worldTime);
         System.out.println("Кол-во живих клеток " + cellCnt);
+        int atackLev = 0;
+        for(int i=0;i<HEIGHT;i++) {
+            for (int j = 0; j < WEIGHT; j++) {
+                if (!cellArray[i][j].isEmptyCell()) {
+                    atackLev += ((Cell) (cellArray[i][j])).getAttacked();
+                }
+            }
+        }
+        System.out.println("Уровень войны " + atackLev);
         System.out.println("================================");
     }
 
-    public void live(){ //один шаг жизни мира
+    public static int getRndColor(){
+        return (int) (Math.random()*8+2);
+    }
+
+    public void live() throws Exception { //один шаг жизни мира
         worldTime += 1;
+/*        if (worldTime%500==0) {
+            setFoodLevel(foodLevel*0.999f);
+        }*/
         checkConsistency();
-        for(int i=0;i<HEIGHT;i++){
+/*        for(int i=0;i<HEIGHT;i++){
             for(int j=0;j<WEIGHT;j++){
                 if (!isEmptyCell(j,i)){
                     ((Cell)cellArray[i][j]).live();
                 }
             }
-        }
+        }*/
+        //ускоряем
+        WorldCalcalator worldCalcalator = new WorldCalcalator(this);
+
+        checkConsistency2();
+
         for(int i=0;i<HEIGHT;i++){
             for(int j=0;j<WEIGHT;j++){
                 if (!isEmptyCell(j,i)){
@@ -82,6 +105,19 @@ public class World {//мир
         }
     }
 
+    public void checkConsistency2(){ //проверка консистентности мира (все клетки на своих местах)
+        for(int i=0;i<HEIGHT;i++){
+            for(int j=0;j<WEIGHT;j++){
+                if(!cellArray[i][j].isEmptyCell()){
+                    if( !((Cell)cellArray[i][j]).calculated ) {
+                        //throw new ArrayStoreException("Клетка "+i+" "+j);
+                        System.out.println("Не посчитана клетка "+i+" "+j);
+                    }
+                }
+            }
+        }
+    }
+
     private void createCellArr(int cellCnt){ //инициализация поля
         float goodCellChance = (float) cellCnt/(HEIGHT*WEIGHT);
         cellArray = new AnyCell[HEIGHT][WEIGHT];
@@ -89,7 +125,7 @@ public class World {//мир
             for(int j=0;j<WEIGHT;j++){
                 boolean isGoodCell = Math.random() < goodCellChance;
                 if (isGoodCell) {
-                    cellArray[i][j] = new Cell(this,j,i,100,1);
+                    cellArray[i][j] = new Cell(this,j,i,100,getRndColor());
                 }else {
                     cellArray[i][j] = new EmptyCell(j,i);
                 }
@@ -105,7 +141,7 @@ public class World {//мир
                     boolean isGoodCell = Math.random() < goodCellChance;
                     if (isGoodCell) {
                         cellArray[i][j] = null;
-                        cellArray[i][j] = new Cell(this,j,i,100,1);
+                        cellArray[i][j] = new Cell(this,j,i,100,(int)(Math.random()*2+2));
                     }
                 }
             }
@@ -127,7 +163,6 @@ public class World {//мир
     }
 
     public void setFoodLevel(float foodLevel) {
-        if(foodLevel>0 && foodLevel <= 100){
-            this.foodLevel = foodLevel;};
+            this.foodLevel = foodLevel;
     }
 }

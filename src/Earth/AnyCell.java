@@ -1,6 +1,9 @@
 package Earth;
 
 import java.awt.*;
+import java.security.spec.RSAOtherPrimeInfo;
+
+import static Earth.World.UNDERWATERFOOD;
 
 public abstract class AnyCell{
     public int xPos;//позиция в мире
@@ -12,7 +15,7 @@ public abstract class AnyCell{
     abstract public Color getRealColor();
 
     public void setCellInWater(int waterLevel){
-        if(this.yPos < waterLevel)
+        if(this.yPos <= waterLevel)
         {
             cellInWater = true;
         }
@@ -50,26 +53,28 @@ public abstract class AnyCell{
     }
 }
 
-class Cell extends AnyCell {//ячейка поля, которая может быть пустой или живой
+class Cell extends AnyCell {
+    public int ages = 0;
     private float maxEnergy = 100;//максимум энергии
+    public boolean calculated = false;
     private final float MAXENERGYDECPERSTEP = 1f;//уменьшение макс.енергии за шаг
     private float energy;//энергия клетки (1-100)
-    private final int color;//цвет (0- пустая клетка)
-    private float fightLevel=0;//уровень мастерства драки (0-100)
+    private int color;//цвет (0- пустая клетка)
+    private float fightLevel=1;//уровень мастерства драки (0-10)
     private int eyeDirection=0;//напрвление взгляда (0 - вверх)
     private int nextAction;//запланированное действие
-    private int attacked=0;//(0..10) флаг атаки. Опускается на 1 за каждый следующий шаг
+    private int attacked=0;//(0..5) флаг атаки. Опускается на 1 за каждый следующий шаг
     private boolean madeAction = false;
 
 /*дальше всё что касается мозга*/
-    private final int LAYERS_CNT_MIN = 2;//при инициализации, мин. кол-во скрытых слоев
-    private final int LAYERS_CNT_MAX = 8;//при инициализации, макс. кол-во скрытых слоев
-    private final int LAYERS_POW_MIN = 3;//при инициализации, мин. кол-во нейронов в скрытом слое
+    private final int LAYERS_CNT_MIN = 5;//при инициализации, мин. кол-во скрытых слоев
+    private final int LAYERS_CNT_MAX = 10;//при инициализации, макс. кол-во скрытых слоев
+    private final int LAYERS_POW_MIN = 10;//при инициализации, мин. кол-во нейронов в скрытом слое
     private final int LAYERS_POW_MAX = 30;//при инициализации, макс. кол-во нейронов в скрытом слое
 
     private int hidenLayersCnt;//кол-во скрытых слоев
     private int hidenLayersPow;//кол-во нейронов в каждом слое
-    private final int INPUT_SIGNAL_COUNT = 8;//кол-во входных нейронов
+    private final int INPUT_SIGNAL_COUNT = 9;//кол-во входных нейронов
     /*
     1- уровень энергии
     2- уровень мастерства драки
@@ -89,17 +94,27 @@ class Cell extends AnyCell {//ячейка поля, которая может �
     */
 
     /*дальше всё что касается деления*/
-    public final float CHANCETOCHANGECOLOR = 0.001f;//шанс поменять цвет
-    public final float CHANCETOMUTATE = 0.2f;//шанс мутировать при делении
+    public final float CHANCETOCHANGECOLOR = 0.0001f;//шанс поменять цвет
+    public final float CHANCETOMUTATE = 0.1f;//шанс мутировать при делении
 
     private NNetLayer [] nnet;
 
+    private boolean gothrou(){
+        return isaPredator();
+    }
+
     public void live(){//функция жизни, вызывается раз за ход
+        if(calculated)return;
+        if (ages > 1000){
+            System.out.println("Долгожитель");
+        }
         madeAction = false;
         thinc();
-        reduceEnergy(myWorld.FOOD_LEVEL_PER_STEP);
+        //reduceEnergy(myWorld.FOOD_LEVEL_PER_STEP/(fightLevel/1.5f));
+        reduceEnergy(myWorld.FOOD_LEVEL_PER_STEP - myWorld.FOOD_LEVEL_PER_STEP*((fightLevel-1)/20));
         reduceAttacked();
         maxEnergy-=MAXENERGYDECPERSTEP;
+        calculated = true;
     }
 
     public void makeAction(){
@@ -112,10 +127,12 @@ class Cell extends AnyCell {//ячейка поля, которая может �
             }
             case 2:{
                 step();
+                eat();
                 break;
             }
             case 3:{
                 atack();
+                eat();
                 break;
             }
             case 4:{
@@ -125,6 +142,8 @@ class Cell extends AnyCell {//ячейка поля, которая может �
             default: throw new ArrayStoreException();
         }
         madeAction = true;
+        calculated = false;
+        ages+=1;
     }
 
     private void setRndBrain(){//инициализация мозга
@@ -155,7 +174,31 @@ class Cell extends AnyCell {//ячейка поля, которая может �
             int newX = getNewXPosOnStep(i, xPos);
             int newY = getNewYPosOnStep(i, yPos);
             if ((newX>=0)&(newY>=0)&(newX<myWorld.WEIGHT)&(newY<myWorld.HEIGHT)){
-                res += (this.color==myWorld.getCellByPos(newX,newY).getColor())?1:0;
+                res += (getColor()==myWorld.getCellByPos(newX,newY).getColor())?1:0;
+            }
+        }
+        return res;
+    }
+
+    private int enemisNearCount(){//кол-во клеток другого цвета рядом
+        int res=0;
+        for(int i=0;i<8;i++) {//смотрим вокруг
+            int newX = getNewXPosOnStep(i, xPos);
+            int newY = getNewYPosOnStep(i, yPos);
+            if ((newX>=0)&(newY>=0)&(newX<myWorld.WEIGHT)&(newY<myWorld.HEIGHT)){
+                res += (getColor()!=myWorld.getCellByPos(newX,newY).getColor())?1:0;
+            }
+        }
+        return res;
+    }
+
+    private int freeCellNearCount(){//кол-во пустых клеток рядом
+        int res=0;
+        for(int i=0;i<8;i++) {//смотрим вокруг
+            int newX = getNewXPosOnStep(i, xPos);
+            int newY = getNewYPosOnStep(i, yPos);
+            if ((newX>=0)&(newY>=0)&(newX<myWorld.WEIGHT)&(newY<myWorld.HEIGHT)){
+                res += (getColor()!=myWorld.getCellByPos(newX,newY).getColor())?1:0;
             }
         }
         return res;
@@ -192,7 +235,9 @@ class Cell extends AnyCell {//ячейка поля, которая может �
         5- если бот, то одного цвета или нет
         6- кол-во собратьев рядом
         7- напр взгляда по X
-        8- напр взгляда по Y*/
+        8- напр взгляда по Y
+        9- уровень противника
+        */
 
         float maxOutput = -100;
         int maxEyeDirection=0;
@@ -202,17 +247,18 @@ class Cell extends AnyCell {//ячейка поля, которая может �
             int newX = getNewXPosOnStep(i,xPos);
             int newY = getNewYPosOnStep(i,yPos);
             if(newX<0 | newY <0 | newX>=myWorld.WEIGHT | newY>=myWorld.HEIGHT) continue;
-            float [] inparr = new float[8];
+            float [] inparr = new float[INPUT_SIGNAL_COUNT];
             inparr[0] = this.energy/100;
-            inparr[1] = this.fightLevel/100;
-            inparr[2] = this.attacked/10;
+            inparr[1] = this.fightLevel/10;
+            inparr[2] = this.attacked/5;
             inparr[3] = (myWorld.isEmptyCell(newX,newY))?0:1;
             if(inparr[3]==1){
-                inparr[4]=(this.color==myWorld.getCellByPos(newX,newY).getColor())?1:-1;
-            }else inparr[4]=0;
+                inparr[4]=(getColor()==myWorld.getCellByPos(newX,newY).getColor())?1:0;
+            }else inparr[4]=0.5f;
             inparr[5] = friendsNearCount();
             inparr[6] = newX - xPos;
             inparr[7] = newY - yPos;
+            inparr[8] = (myWorld.isEmptyCell(newX,newY))?0:(((Cell)(myWorld.getCellByPos(newX,newY))).getFightLevel());
 
             nnet[0].calc(inparr);
             for(int j=1;j<nnet.length;j++){
@@ -232,7 +278,7 @@ class Cell extends AnyCell {//ячейка поля, которая может �
     }
 
     private void reduceAttacked(){
-        attacked = (attacked>0)?attacked--:0;
+        attacked = (attacked>0)?attacked-1:0;
     }
 
     private void step(){//шагаем по направлению взгляда
@@ -244,19 +290,46 @@ class Cell extends AnyCell {//ячейка поля, которая может �
         if (newY <0)newY=0;
         if (newY >=myWorld.HEIGHT)newY=myWorld.HEIGHT-1;
 
-        if (myWorld.isEmptyCell(newX,newY)){
-            EmptyCell tmpCell = (EmptyCell) myWorld.cellArray[newY][newX];
+        if(isaPredator()) maxEnergy+=(maxEnergy<100)?MAXENERGYDECPERSTEP*1.5f:0;
+
+        if (gothrou()){
+            AnyCell tmpCell = myWorld.cellArray[newY][newX];
             myWorld.cellArray[newY][newX] = this;
             myWorld.cellArray[yPos][xPos] = tmpCell;
             tmpCell.xPos = this.xPos;
             tmpCell.yPos = this.yPos;
             this.xPos = newX;
             this.yPos = newY;
+        }else {
+            if (myWorld.isEmptyCell(newX,newY)){
+                EmptyCell tmpCell = (EmptyCell) myWorld.cellArray[newY][newX];
+                myWorld.cellArray[newY][newX] = this;
+                myWorld.cellArray[yPos][xPos] = tmpCell;
+                tmpCell.xPos = this.xPos;
+                tmpCell.yPos = this.yPos;
+                this.xPos = newX;
+                this.yPos = newY;
+            }
         }
     }
 
+    private boolean isaPredator() {
+        return fightLevel >= myWorld.PREDATOR_FIGHT_LEV;
+    }
+
     private void eat(){//едим
-        if(!myWorld.isCellInWater(this)){ addEnergy(myWorld.getFoodLevel());};
+        float foodLev = myWorld.getFoodLevel();
+        if(!myWorld.isCellInWater(this)){
+            //addEnergy(myWorld.getFoodLevel() / myWorld.cellCnt);
+            //addEnergy(myWorld.getFoodLevel() * (freeCellNearCount()/8.0f));
+            //addEnergy(myWorld.getFoodLevel() * (11-fightLevel)/10.0f);
+            addEnergy(foodLev - foodLev*((fightLevel-1)/13f));
+        }else{
+            //addEnergy((myWorld.getFoodLevel() / myWorld.cellCnt) * UNDERWATERFOOD);
+            //addEnergy(myWorld.getFoodLevel() * (freeCellNearCount()/8.0f) * UNDERWATERFOOD);
+            //addEnergy(myWorld.getFoodLevel() * (11-fightLevel)/10.0f * UNDERWATERFOOD);
+            addEnergy(foodLev * UNDERWATERFOOD - foodLev*((fightLevel-1)/13f));
+        };
     }
 
     private void atack(){//атакуем
@@ -266,16 +339,30 @@ class Cell extends AnyCell {//ячейка поля, которая может �
         if ((opponentX >= 0)&(opponentX < myWorld.WEIGHT)&(opponentY >= 0)&(opponentY < myWorld.HEIGHT)){
             AnyCell opponentCell = myWorld.getCellByPos(opponentX,opponentY);
             if(! myWorld.isEmptyCell(opponentCell)){
+                maxEnergy+=(maxEnergy<100)?MAXENERGYDECPERSTEP*1.5f:0;
                 fight((Cell)opponentCell);
             }
         }
     }
 
+    private boolean amIWin(float myPar, float oppPar){
+        float fullp = myPar+oppPar;
+        float rnd = (float) (Math.random()*fullp);
+        return (rnd <= myPar);
+    }
+
+    private float getEnergyFromAttack(Cell winner, Cell looser){
+        float deltaLev = (winner.fightLevel/looser.fightLevel);
+        float rnd = (float) (Math.random()*deltaLev*(winner.getEnergy()+winner.fightLevel*10f));
+        return rnd;
+    };
+
+
     private void fight(Cell opponentCell){//определение победителя в схватке
         Cell winner;
         Cell looser;
         opponentCell.setAttacked();
-        if ((this.energy * this.fightLevel) > (opponentCell.energy*opponentCell.fightLevel)){//определяем победителя
+        if (amIWin((this.energy/50.0f + this.fightLevel), (opponentCell.energy/50.0f + opponentCell.fightLevel))){//определяем победителя
             winner = this;
             looser = opponentCell;
         }else{
@@ -283,9 +370,10 @@ class Cell extends AnyCell {//ячейка поля, которая может �
             looser = this;
         };
 
-        float deltaEnergy = looser.energy * winner.fightLevel / 100;//передача энергии
-        winner.fightLevel += 1;
-        looser.reduceEnergy(deltaEnergy);
+        float deltaEnergy = getEnergyFromAttack(winner, looser);
+        winner.fightLevel = (winner.fightLevel<10)?winner.fightLevel+1f:winner.fightLevel;
+        //looser.fightLevel = (looser.fightLevel<10)?looser.fightLevel+0.5f:looser.fightLevel;
+        deltaEnergy = looser.reduceEnergy(deltaEnergy);
         winner.addEnergy(deltaEnergy);
     }
 
@@ -302,10 +390,13 @@ class Cell extends AnyCell {//ячейка поля, которая может �
     public Cell(int xPos, int yPos, Cell parentCell,boolean mutate) {
         this.xPos = xPos;
         this.yPos = yPos;
+        //this.fightLevel = (parentCell.fightLevel>1)?parentCell.fightLevel-0.3f:1;
+        this.fightLevel = parentCell.fightLevel;
         this.energy = parentCell.energy/2;
+        this.maxEnergy = 100;
         float rnd = (float) Math.random();
         if (rnd <= CHANCETOCHANGECOLOR){
-            this.color = (int) (Math.random()*9+1);
+            this.color = World.getRndColor();
         }else this.color = parentCell.color;
 
         myWorld = parentCell.myWorld;
@@ -324,10 +415,11 @@ class Cell extends AnyCell {//ячейка поля, которая может �
 
     private void addEnergy(float energy) {
         this.energy += energy;
-        this.energy = (this.energy>maxEnergy)?maxEnergy:this.energy;
+        this.energy = (this.energy>(maxEnergy+fightLevel*10))?(maxEnergy+fightLevel*10):this.energy;
     }
 
     private float reduceEnergy(float energy){
+        this.energy = (this.energy>(maxEnergy+fightLevel*10))?(maxEnergy+fightLevel*10):this.energy;
         if (this.energy > energy){
             this.energy -= energy;
             return energy;
@@ -344,14 +436,16 @@ class Cell extends AnyCell {//ячейка поля, которая может �
 
     @Override
     public int getColor() {
+        if(isaPredator()){
+            color=1;};
         return color;
     }
 
     @Override
     public Color getRealColor() {
-        return switch (color){
-            case 1: yield Color.green;
-            case 2: yield Color.red;
+        return switch (getColor()){
+            case 1: yield Color.red;
+            case 2: yield Color.green;
             case 3: yield Color.CYAN;
             case 4: yield Color.magenta;
             case 5: yield Color.ORANGE;
@@ -373,7 +467,7 @@ class Cell extends AnyCell {//ячейка поля, которая может �
     }
 
     public void setAttacked() {
-        this.attacked = 10;
+        this.attacked = 5;
     }
 }
 
@@ -394,6 +488,9 @@ class EmptyCell extends AnyCell{//пустая ячейка поля
 
     @Override
     public Color getRealColor() {
+        if(myWorld!=null) {
+            setCellInWater(myWorld.WATERHEIGHT);
+        }
         return (cellInWater)?Color.BLUE:Color.WHITE;
     }
 }

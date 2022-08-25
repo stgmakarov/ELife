@@ -19,13 +19,16 @@ public class MainForm extends JFrame {
     }
 
     public void paint(Graphics g){
+        if(world==null)return;
         for(int i=0;i<world.HEIGHT;i++){
             for(int j=0;j<world.WEIGHT;j++){
                 if(world.cellArray[i][j]==null){
                     continue;
                 }
+                g.setColor(Color.BLACK);
+                g.drawRect(j*5,(world.HEIGHT-i)*5,5,5);
                 g.setColor(world.cellArray[i][j].getRealColor());
-                g.fillRect(j,world.HEIGHT-i,1,1);
+                g.fillRect(j*5+1,(world.HEIGHT-i)*5+1,4,4);
             }
         }
     }
