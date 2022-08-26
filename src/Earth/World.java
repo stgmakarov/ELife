@@ -125,7 +125,7 @@ public class World {//мир
             for(int j=0;j<WEIGHT;j++){
                 boolean isGoodCell = Math.random() < goodCellChance;
                 if (isGoodCell) {
-                    cellArray[i][j] = new Cell(this,j,i,100,getRndColor());
+                    cellArray[i][j] = new Cell(this,j,i,Cell.MAX_ENERGY,getRndColor());
                 }else {
                     cellArray[i][j] = new EmptyCell(j,i);
                 }
@@ -141,7 +141,7 @@ public class World {//мир
                     boolean isGoodCell = Math.random() < goodCellChance;
                     if (isGoodCell) {
                         cellArray[i][j] = null;
-                        cellArray[i][j] = new Cell(this,j,i,100,(int)(Math.random()*2+2));
+                        cellArray[i][j] = new Cell(this,j,i,Cell.MAX_ENERGY,(int)(Math.random()*2+2));
                     }
                 }
             }

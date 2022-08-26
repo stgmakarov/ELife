@@ -54,8 +54,9 @@ public abstract class AnyCell{
 }
 
 class Cell extends AnyCell {
+    public static final int MAX_ENERGY = 500;
     public int ages = 0;
-    private float maxEnergy = 100;//максимум энергии
+    private float maxEnergy = MAX_ENERGY;//максимум энергии
     public boolean calculated = false;
     private final float MAXENERGYDECPERSTEP = 1f;//уменьшение макс.енергии за шаг
     private float energy;//энергия клетки (1-100)
@@ -65,6 +66,7 @@ class Cell extends AnyCell {
     private int nextAction;//запланированное действие
     private int attacked=0;//(0..5) флаг атаки. Опускается на 1 за каждый следующий шаг
     private boolean madeAction = false;
+    private boolean sendedEnergy = false;
 
 /*дальше всё что касается мозга*/
     private final int LAYERS_CNT_MIN = 5;//при инициализации, мин. кол-во скрытых слоев
@@ -74,17 +76,8 @@ class Cell extends AnyCell {
 
     private int hidenLayersCnt;//кол-во скрытых слоев
     private int hidenLayersPow;//кол-во нейронов в каждом слое
-    private final int INPUT_SIGNAL_COUNT = 9;//кол-во входных нейронов
-    /*
-    1- уровень энергии
-    2- уровень мастерства драки
-    3- уровень атаки
-    4- бот перед ним или нет
-    5- если бот, то одного цвета или нет
-    6- кол-во собратьев рядом
-    7- напр взгляда по X
-    8- напр взгляда по Y
-    */
+    private final int INPUT_SIGNAL_COUNT = 10;//кол-во входных нейронов
+
     private final int OUTPUT_SIGNAL_COUNT = 4;//кол-во выходных нейронов
     /*
     1- есть
@@ -99,15 +92,19 @@ class Cell extends AnyCell {
 
     private NNetLayer [] nnet;
 
+    private float getMaxEnergy(){
+        return maxEnergy+fightLevel*50;
+    }
+
     private boolean gothrou(){
         return isaPredator();
     }
 
     public void live(){//функция жизни, вызывается раз за ход
         if(calculated)return;
-        if (ages > 1000){
-            System.out.println("Долгожитель");
-        }
+        //if (ages > 1000){
+        //    System.out.println("Долгожитель");
+        //}
         madeAction = false;
         thinc();
         //reduceEnergy(myWorld.FOOD_LEVEL_PER_STEP/(fightLevel/1.5f));
@@ -119,6 +116,7 @@ class Cell extends AnyCell {
 
     public void makeAction(){
         if(madeAction)return;
+        sendedEnergy = false;
         switch (nextAction){
             case 0: break;
             case 1:{
@@ -237,6 +235,7 @@ class Cell extends AnyCell {
         7- напр взгляда по X
         8- напр взгляда по Y
         9- уровень противника
+        10- кол-во свободных клеток рядом
         */
 
         float maxOutput = -100;
@@ -259,6 +258,7 @@ class Cell extends AnyCell {
             inparr[6] = newX - xPos;
             inparr[7] = newY - yPos;
             inparr[8] = (myWorld.isEmptyCell(newX,newY))?0:(((Cell)(myWorld.getCellByPos(newX,newY))).getFightLevel());
+            inparr[9] = freeCellNearCount()/8.0f;
 
             nnet[0].calc(inparr);
             for(int j=1;j<nnet.length;j++){
@@ -323,12 +323,12 @@ class Cell extends AnyCell {
             //addEnergy(myWorld.getFoodLevel() / myWorld.cellCnt);
             //addEnergy(myWorld.getFoodLevel() * (freeCellNearCount()/8.0f));
             //addEnergy(myWorld.getFoodLevel() * (11-fightLevel)/10.0f);
-            addEnergy(foodLev - foodLev*((fightLevel-1)/13f));
+            addEnergy(foodLev - foodLev*((fightLevel-1)/10f));
         }else{
             //addEnergy((myWorld.getFoodLevel() / myWorld.cellCnt) * UNDERWATERFOOD);
             //addEnergy(myWorld.getFoodLevel() * (freeCellNearCount()/8.0f) * UNDERWATERFOOD);
             //addEnergy(myWorld.getFoodLevel() * (11-fightLevel)/10.0f * UNDERWATERFOOD);
-            addEnergy(foodLev * UNDERWATERFOOD - foodLev*((fightLevel-1)/13f));
+            addEnergy(foodLev * UNDERWATERFOOD - foodLev*((fightLevel-1)/10f));
         };
     }
 
@@ -341,6 +341,7 @@ class Cell extends AnyCell {
             if(! myWorld.isEmptyCell(opponentCell)){
                 maxEnergy+=(maxEnergy<100)?MAXENERGYDECPERSTEP*1.5f:0;
                 fight((Cell)opponentCell);
+                fightLevel = (fightLevel<10)?fightLevel+1.0f:fightLevel;
             }
         }
     }
@@ -353,7 +354,7 @@ class Cell extends AnyCell {
 
     private float getEnergyFromAttack(Cell winner, Cell looser){
         float deltaLev = (winner.fightLevel/looser.fightLevel);
-        float rnd = (float) (Math.random()*deltaLev*(winner.getEnergy()+winner.fightLevel*10f));
+        float rnd = (float) (Math.random()*deltaLev*(winner.getEnergy()+winner.fightLevel*10f))/0.5f;
         return rnd;
     };
 
@@ -371,8 +372,6 @@ class Cell extends AnyCell {
         };
 
         float deltaEnergy = getEnergyFromAttack(winner, looser);
-        winner.fightLevel = (winner.fightLevel<10)?winner.fightLevel+1f:winner.fightLevel;
-        //looser.fightLevel = (looser.fightLevel<10)?looser.fightLevel+0.5f:looser.fightLevel;
         deltaEnergy = looser.reduceEnergy(deltaEnergy);
         winner.addEnergy(deltaEnergy);
     }
@@ -393,7 +392,7 @@ class Cell extends AnyCell {
         //this.fightLevel = (parentCell.fightLevel>1)?parentCell.fightLevel-0.3f:1;
         this.fightLevel = parentCell.fightLevel;
         this.energy = parentCell.energy/2;
-        this.maxEnergy = 100;
+        this.maxEnergy = MAX_ENERGY;
         float rnd = (float) Math.random();
         if (rnd <= CHANCETOCHANGECOLOR){
             this.color = World.getRndColor();
@@ -413,13 +412,40 @@ class Cell extends AnyCell {
         return energy;
     }
 
-    private void addEnergy(float energy) {
+    private float sendEnergy(float delta){
+        sendedEnergy = true;
+        int friendsCnt = friendsNearCount();
+        float energyForBrother = delta / friendsCnt;
+        for(int i=0;i<8;i++) {//смотрим вокруг
+            if (delta<=0)break;
+            int newX = getNewXPosOnStep(i, xPos);
+            int newY = getNewYPosOnStep(i, yPos);
+            if ((newX>=0)&(newY>=0)&(newX<myWorld.WEIGHT)&(newY<myWorld.HEIGHT)){
+                if(getColor()==myWorld.getCellByPos(newX,newY).getColor()){
+                    delta -= ((Cell)myWorld.getCellByPos(newX,newY)).addEnergy(energyForBrother);
+                }
+            }
+        }
+        return delta;
+    }
+
+    public float addEnergy(float energy) {
+        if(sendedEnergy) return 0;
         this.energy += energy;
-        this.energy = (this.energy>(maxEnergy+fightLevel*10))?(maxEnergy+fightLevel*10):this.energy;
+        //this.energy = (this.energy>(maxEnergy+fightLevel*10))?(maxEnergy+fightLevel*10):this.energy;
+        if(this.energy>(getMaxEnergy())){
+            float delta = this.energy-(getMaxEnergy());
+            this.energy=(getMaxEnergy());
+            if(delta>0)delta = sendEnergy(delta);
+            return delta;
+        }else {
+
+            return 0;
+        }
     }
 
     private float reduceEnergy(float energy){
-        this.energy = (this.energy>(maxEnergy+fightLevel*10))?(maxEnergy+fightLevel*10):this.energy;
+        this.energy = (this.energy>(getMaxEnergy()))?(getMaxEnergy()):this.energy;
         if (this.energy > energy){
             this.energy -= energy;
             return energy;
